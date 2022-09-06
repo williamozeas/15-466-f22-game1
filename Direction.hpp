@@ -2,7 +2,9 @@
 // Created by William Ozeas on 9/5/22.
 //
 
-#ifndef INC_15_466_F22_GAME1_DIRECTION_H
-#define INC_15_466_F22_GAME1_DIRECTION_H
+#ifndef INC_15_466_F22_GAME1_DIRECTION_HPP
+#define INC_15_466_F22_GAME1_DIRECTION_HPP
 
-#endif //INC_15_466_F22_GAME1_DIRECTION_H
+enum Direction { leftDir, rightDir, upDir, downDir, upLeftDir, upRightDir, downLeftDir, downRightDir };
+
+#endif //INC_15_466_F22_GAME1_DIRECTION_HPP

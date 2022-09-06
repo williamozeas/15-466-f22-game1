@@ -108,7 +108,8 @@ const game_objs = [
 	maek.CPP('data_path.cpp'),
 	maek.CPP('Mode.cpp'),
 	maek.CPP('gl_compile_program.cpp'),
-	maek.CPP('GL.cpp')
+	maek.CPP('GL.cpp'),
+	maek.CPP('Projectile.cpp'),
 ];
 
 //the '[exeFile =] LINK(objFiles, exeFileBase, [, options])' links an array of objects into an executable:
@@ -132,7 +133,13 @@ maek.RULE([':run'], [game_exe], [
 //Note that tasks that produce ':abstract targets' are never cached.
 // This is similar to how .PHONY targets behave in make.
 
-
+//build pipeline
+//from 15466 discord, base from Jim MacCann
+maek.RULE(['dist/assets/main.tiles', "dist/assets/projectile.map"], [game_exe], [
+	['./AssetPipeline']
+]);
+maek.TARGETS.push('dist/assets/main.tiles');
+maek.TARGETS.push('dist/assets/projectile.map');
 
 //==========================================================================
 //Now, onward to the code that makes all this work:
@@ -299,6 +306,8 @@ function init_maek() {
 			maek.tasks[target] = task;
 		}
 	};
+
+
 
 
 	//CHECK adds a task that checks targets exist (after prerequisites have been created):

@@ -26,7 +26,8 @@
  * 1. std::string support
  * 2. usable with std::sort and std::vectors
  *
- * Changes by neur
+ * Changes by neurobin here: https://github.com/Amerge/natsort
+ * Found on stackoverflow here: https://stackoverflow.com/questions/9743485/natural-sort-of-directory-filenames-in-c/33880554#33880554
  *
  * ********************************************************************/
 

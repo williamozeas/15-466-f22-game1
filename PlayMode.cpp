@@ -1,3 +1,4 @@
+
 #include "PlayMode.hpp"
 
 //for the GL_ERRORS() macro:
@@ -7,6 +8,33 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include <random>
+#include <fstream>
+#include <cmath>
+#include <deque>
+
+//struct ProjectileSet;
+
+//Loading main tile set from dist/assets/main.tiles
+
+Load < std::vector< PPU466::Tile > > main_tiles( LoadTagDefault,  []() {
+    std::ifstream ifs(data_path("assets/main.tiles").c_str(), std::ios::binary);
+    if(!ifs.is_open()) {
+        std::cerr << "File open failed\n";
+    }
+    auto *tiles = new std::vector< PPU466::Tile >();
+    read_chunk(ifs, "til0", tiles);
+    return tiles;
+});
+
+Load< std::vector < PlayMode::ProjectileSet >> projectile_map(LoadTagDefault, []() {
+    std::ifstream ifs(data_path("assets/projectile.map").c_str(), std::ios::binary);
+    if(!ifs.is_open()) {
+        std::cerr << "File open failed\n";
+    }
+    auto *maps = new std::vector < PlayMode::ProjectileSet >();
+    read_chunk(ifs, "map0", maps);
+    return maps;
+});
 
 PlayMode::PlayMode() {
 	//TODO:
@@ -16,61 +44,38 @@ PlayMode::PlayMode() {
 	//  make yourself a script that spits out the code that you paste in here
 	//   and check that script into your repository.
 
-	//Also, *don't* use these tiles in your game:
+    /* Things I need to make
+     * Asset pipeline file that converts png to binary
+     * playmode game logic
+     *
+     * Assets I need to load:
+     * Tile asset (pre-defined)
+     * Map asset (I define)
+     */
+    glm::i8vec2 centers(int8_t(PPU466::ScreenWidth/2 - 4), int8_t(PPU466::ScreenHeight/2 - 4));
+    center = centers;
 
-	{ //use tiles 0-16 as some weird dot pattern thing:
-		std::array< uint8_t, 8*8 > distance;
-		for (uint32_t y = 0; y < 8; ++y) {
-			for (uint32_t x = 0; x < 8; ++x) {
-				float d = glm::length(glm::vec2((x + 0.5f) - 4.0f, (y + 0.5f) - 4.0f));
-				d /= glm::length(glm::vec2(4.0f, 4.0f));
-				distance[x+8*y] = uint8_t(std::max(0,std::min(255,int32_t( 255.0f * d ))));
-			}
-		}
-		for (uint32_t index = 0; index < 16; ++index) {
-			PPU466::Tile tile;
-			uint8_t t = uint8_t((255 * index) / 16);
-			for (uint32_t y = 0; y < 8; ++y) {
-				uint8_t bit0 = 0;
-				uint8_t bit1 = 0;
-				for (uint32_t x = 0; x < 8; ++x) {
-					uint8_t d = distance[x+8*y];
-					if (d > t) {
-						bit0 |= (1 << x);
-					} else {
-						bit1 |= (1 << x);
-					}
-				}
-				tile.bit0[y] = bit0;
-				tile.bit1[y] = bit1;
-			}
-			ppu.tile_table[index] = tile;
-		}
-	}
+    unusedProjectiles = new std::deque< Projectile * >();
+    activeProjectiles = new std::deque< Projectile * >();
 
-	//use sprite 32 as a "player":
-	ppu.tile_table[32].bit0 = {
-		0b01111110,
-		0b11111111,
-		0b11111111,
-		0b11111111,
-		0b11111111,
-		0b11111111,
-		0b11111111,
-		0b01111110,
-	};
-	ppu.tile_table[32].bit1 = {
-		0b00000000,
-		0b00000000,
-		0b00011000,
-		0b00100100,
-		0b00000000,
-		0b00100100,
-		0b00000000,
-		0b00000000,
-	};
+    for(uint16_t i = 20; i < ppu.sprites.size(); i++) {
+        unusedProjectiles->push_back(new Projectile(&ppu.sprites.at(i)));
+    }
 
-	//makes the outside of tiles 0-16 solid:
+
+    //Use read_chunk to get tile objects from binaries
+    for(uint32_t i = 0; i < main_tiles->size(); i++) {
+        ppu.tile_table[i] = main_tiles->at(i);
+    }
+    //Sprite numbers
+    //player sprite = 0
+    //projectile sprite = 1
+    //black hole sprites = 2 - 3
+    //empty tile = 4
+    //asteroids = 5 - 9
+    //background centers = 10 - 13
+
+	//black hole:
 	ppu.palette_table[0] = {
 		glm::u8vec4(0x00, 0x00, 0x00, 0x00),
 		glm::u8vec4(0x00, 0x00, 0x00, 0xff),
@@ -78,86 +83,318 @@ PlayMode::PlayMode() {
 		glm::u8vec4(0x00, 0x00, 0x00, 0xff),
 	};
 
-	//makes the center of tiles 0-16 solid:
+	//projectiles:
 	ppu.palette_table[1] = {
 		glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-		glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-		glm::u8vec4(0x00, 0x00, 0x00, 0xff),
-		glm::u8vec4(0x00, 0x00, 0x00, 0xff),
+		glm::u8vec4(0xff, 0xff, 0xff, 0xff),
+		glm::u8vec4(0xfc, 0xe7, 0x7d, 0xff),
+		glm::u8vec4(0xff, 0xff, 0xff, 0xff),
 	};
+
+    //asteroids
+    ppu.palette_table[2] = {
+            glm::u8vec4(0x00, 0x00, 0x00, 0x00),
+            glm::u8vec4(0xa0, 0xa0, 0xa0, 0xff),
+            glm::u8vec4(0x00, 0x00, 0x00, 0x00),
+            glm::u8vec4(0xa0, 0xa0, 0xa0, 0xff),
+    };
+
+    //background
+    ppu.palette_table[3] = {
+            glm::u8vec4(0x00, 0x00, 0x00, 0x00),
+            glm::u8vec4(0xe0, 0xe0, 0xe0, 0xff),
+            glm::u8vec4(0x00, 0x00, 0x00, 0x00),
+            glm::u8vec4(0x00, 0xff, 0x00, 0xff),
+    };
 
 	//used for the player:
 	ppu.palette_table[7] = {
 		glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-		glm::u8vec4(0xff, 0xff, 0x00, 0xff),
 		glm::u8vec4(0x00, 0x00, 0x00, 0xff),
+        glm::u8vec4(0xff, 0xff, 0x00, 0xff),
 		glm::u8vec4(0x00, 0x00, 0x00, 0xff),
 	};
 
-	//used for the misc other sprites:
+    //for end screen
 	ppu.palette_table[6] = {
 		glm::u8vec4(0x00, 0x00, 0x00, 0x00),
-		glm::u8vec4(0x88, 0x88, 0xff, 0xff),
-		glm::u8vec4(0x00, 0x00, 0x00, 0xff),
+        glm::u8vec4(0x00, 0x00, 0x00, 0xff),
+		glm::u8vec4(0xfa, 0xcb, 0xde, 0xff),
 		glm::u8vec4(0x00, 0x00, 0x00, 0x00),
 	};
+
+    ppu.background_color = glm::vec3(0x00, 0x00, 0x00);
+
+    for (uint32_t i = 0; i < ppu.background.size(); ++i) {
+        int rand = std::rand() % 40;
+        if(rand == 0) {
+            ppu.background[i] = 0x030e;
+        } else if(rand <= 4) {
+            ppu.background[i] = 0x030f;
+        } else {
+            ppu.background[i] = 0x0004;
+        }
+    }
+    ppu.background[(ppu.BackgroundWidth) * (ppu.ScreenHeight/16)     + ppu.ScreenWidth/16 - 1] = 0x010a;
+    ppu.background[(ppu.BackgroundWidth) * (ppu.ScreenHeight/16 - 1) + ppu.ScreenWidth/16 - 1] = 0x010b;
+    ppu.background[(ppu.BackgroundWidth) * (ppu.ScreenHeight/16 - 1) + ppu.ScreenWidth/16] = 0x010c;
+    ppu.background[(ppu.BackgroundWidth) * (ppu.ScreenHeight/16)     + ppu.ScreenWidth/16] = 0x010d;
+
+    //set player start position
+    currentDirection = upDir;
+
+
+    //asteroids sprites 4-19
+    for(int i = 0; i < ASTEROID_COUNT; i++) {
+        ppu.sprites[i + 4].attributes = 0x02;
+        ppu.sprites[i + 4].index = asteroids[i].sprite;
+    }
 
 }
 
 PlayMode::~PlayMode() {
+    for(Projectile *proj : *activeProjectiles) {
+        free(proj);
+    }
+    for(Projectile *proj : *unusedProjectiles) {
+        free(proj);
+    }
+
+    free(activeProjectiles);
+    free(unusedProjectiles);
+}
+
+void PlayMode::reset() {
+    tick_index = 0;
+    totalTime = 0;
+    distance_from_center = START_DIST;
+    currentDirection = upDir;
+
+    for(Projectile *proj : *activeProjectiles) {
+        despawn_projectile(proj);
+    }
 }
 
 bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size) {
-
+    bool ret = false;
 	if (evt.type == SDL_KEYDOWN) {
 		if (evt.key.keysym.sym == SDLK_LEFT) {
 			left.downs += 1;
 			left.pressed = true;
-			return true;
+			ret = true;
 		} else if (evt.key.keysym.sym == SDLK_RIGHT) {
 			right.downs += 1;
 			right.pressed = true;
-			return true;
+			ret = true;
 		} else if (evt.key.keysym.sym == SDLK_UP) {
 			up.downs += 1;
 			up.pressed = true;
-			return true;
+			ret = true;
 		} else if (evt.key.keysym.sym == SDLK_DOWN) {
 			down.downs += 1;
 			down.pressed = true;
-			return true;
+			ret = true;
 		}
 	} else if (evt.type == SDL_KEYUP) {
 		if (evt.key.keysym.sym == SDLK_LEFT) {
 			left.pressed = false;
-			return true;
+			ret = true;
 		} else if (evt.key.keysym.sym == SDLK_RIGHT) {
 			right.pressed = false;
-			return true;
+			ret = true;
 		} else if (evt.key.keysym.sym == SDLK_UP) {
 			up.pressed = false;
-			return true;
+			ret = true;
 		} else if (evt.key.keysym.sym == SDLK_DOWN) {
 			down.pressed = false;
-			return true;
+			ret = true;
 		}
 	}
 
-	return false;
+    if (right.pressed && down.pressed) {
+        currentDirection = downRightDir;
+    }
+    else if (right.pressed && up.pressed) {
+        currentDirection = upRightDir;
+    }
+    else if (left.pressed && down.pressed) {
+        currentDirection = downLeftDir;
+    }
+    else if (left.pressed && up.pressed) {
+        currentDirection = upLeftDir;
+    }
+    else if (right.pressed) {
+        currentDirection = rightDir;
+    }
+    else if (left.pressed) {
+        currentDirection = leftDir;
+    }
+    else if (up.pressed) {
+        currentDirection = upDir;
+    }
+    else if (down.pressed) {
+        currentDirection = downDir;
+    }
+
+	return ret;
+}
+
+void PlayMode::spawn_projectile(Direction dir) {
+    if(!unusedProjectiles->empty()) {
+        Projectile *proj = unusedProjectiles->front();
+        unusedProjectiles->pop_front();
+        activeProjectiles->push_back(proj);
+        proj->spawn(&ppu, &center, dir);
+    } else {
+        std::cout << "ran out of projectiles!\n"; //will continue running
+    }
+}
+void PlayMode::despawn_projectile(Projectile *proj) {
+    assert(proj);
+    assert(activeProjectiles->size() > 0 && "activeProjectiles Empty!");
+
+    proj->despawn();
+    unusedProjectiles->push_back(proj);
+    int size_pre = activeProjectiles->size();
+    activeProjectiles->erase(std::find(activeProjectiles->begin(), activeProjectiles->end(), proj));
+    assert(size_pre == activeProjectiles->size() + 1 && "activeProjectiles did not remove element!");
+}
+
+void PlayMode::tick() {
+    //handles spawning of projectiles
+    if(tick_index + 1 >= projectile_map->size()) {
+        return;
+    }
+    tick_index++;
+
+    //spawn projectiles
+    ProjectileSet set = projectile_map->at(tick_index);
+    if (set.directions & 0x80) {
+        //spawn top middle projectile etc.
+        spawn_projectile(downDir);
+    }
+    if (set.directions & 0x40) {
+        spawn_projectile(downLeftDir);
+    }
+    if (set.directions & 0x20) {
+        spawn_projectile(leftDir);
+    }
+    if (set.directions & 0x10) {
+        spawn_projectile(upLeftDir);
+    }
+    if (set.directions & 0x08) {
+        spawn_projectile(upDir);
+    }
+    if (set.directions & 0x04) {
+        spawn_projectile(upRightDir);
+    }
+    if (set.directions & 0x02) {
+        spawn_projectile(rightDir);
+    }
+    if (set.directions & 0x01) {
+        spawn_projectile(downRightDir);
+    }
 }
 
 void PlayMode::update(float elapsed) {
+    //tick implementation from CMU CS15466 online text at https://15466.courses.cs.cmu.edu/lesson/timing
+    tick_acc += elapsed;
+    while (tick_acc > Tick) {
+        tick_acc -= Tick;
+        tick();
+    }
 
+    //color update
+    if(totalTime > 0.5f) {
+        ppu.background_color = glm::vec3(
+                0x00,
+                0x00 + ((totalTime / END_TIME) * 0x80),
+                0x00
+                );
+    }
+
+    //win state
+    if(totalTime > END_TIME) {
+        //win state
+        ppu.sprites[7].index = 4;
+        ppu.sprites[1].index = 4;
+        for(uint16_t i = 0; i < ppu.background.size(); i++) {
+            ppu.background[i] = 7;
+            if( i % 2 == 0 ) {
+                ppu.background[i] = 0x0700;
+            } else {
+                ppu.background[i] = 0x0600;
+            }
+        }
+    } else {
+        totalTime += elapsed;
+        distance_from_center += elapsed * 0.5f;
+    }
 	//slowly rotates through [0,1):
-	// (will be used to set background color)
-	background_fade += elapsed / 10.0f;
-	background_fade -= std::floor(background_fade);
+	// (used for projectiles)
+	projectile_fade += elapsed / 10.0f;
+    projectile_fade -= std::floor(projectile_fade);
 
-	constexpr float PlayerSpeed = 30.0f;
-	if (left.pressed) player_at.x -= PlayerSpeed * elapsed;
-	if (right.pressed) player_at.x += PlayerSpeed * elapsed;
-	if (down.pressed) player_at.y -= PlayerSpeed * elapsed;
-	if (up.pressed) player_at.y += PlayerSpeed * elapsed;
+    //saving projectiles to delete so that activeProjectiles isnt edited while iterating through it
+    std::vector< Projectile * > projectiles_to_delete;
+
+    //check collision
+    for(Projectile *proj : *activeProjectiles) {
+        //check player sprite & black hole
+        if (proj->check_collision(&ppu.sprites[0])) {
+            ppu.background_color = glm::vec3(0xff, 0x40, 0x40);
+            reset();
+        } else if(proj->check_collision(&ppu.sprites[1])) {
+            //black hole collision
+            projectiles_to_delete.push_back(proj);
+        }
+    }
+
+    //could be sped up by saving iterators and deleting that instead
+    for(Projectile *proj : projectiles_to_delete) {
+        despawn_projectile(proj);
+    }
+
+
+    //move projectiles
+    for(Projectile *proj : *activeProjectiles) {
+        proj->update(elapsed);
+    }
+
+    //update movement
+    //i forgot switches exist, yes
+    if (currentDirection == downRightDir) {
+        player_at.x = center.x + RAD_2_INV * distance_from_center;
+        player_at.y = center.y - RAD_2_INV * distance_from_center;
+    }
+    else if (currentDirection == upRightDir) {
+        player_at.x = center.x + RAD_2_INV * distance_from_center;
+        player_at.y = center.y + RAD_2_INV * distance_from_center;
+    }
+    else if (currentDirection == downLeftDir) {
+        player_at.x = center.x - RAD_2_INV * distance_from_center;
+        player_at.y = center.y - RAD_2_INV * distance_from_center;
+    }
+    else if (currentDirection == upLeftDir) {
+        player_at.x = center.x - RAD_2_INV * distance_from_center;
+        player_at.y = center.y + RAD_2_INV * distance_from_center;
+    }
+    else if (currentDirection == rightDir) {
+        player_at.x = center.x + distance_from_center;
+        player_at.y = center.y;
+    }
+    else if (currentDirection == leftDir) {
+        player_at.x = center.x - distance_from_center;
+        player_at.y = center.y;
+    }
+    else if (currentDirection == upDir) {
+        player_at.x = center.x;
+        player_at.y = center.y + distance_from_center;
+    }
+    else if (currentDirection == downDir) {
+        player_at.x = center.x;
+        player_at.y = center.y - distance_from_center;
+    }
 
 	//reset button press counters:
 	left.downs = 0;
@@ -169,42 +406,52 @@ void PlayMode::update(float elapsed) {
 void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	//--- set ppu state based on game state ---
 
-	//background color will be some hsv-like fade:
-	ppu.background_color = glm::u8vec4(
-		std::min(255,std::max(0,int32_t(255 * 0.5f * (0.5f + std::sin( 2.0f * M_PI * (background_fade + 0.0f / 3.0f) ) ) ))),
-		std::min(255,std::max(0,int32_t(255 * 0.5f * (0.5f + std::sin( 2.0f * M_PI * (background_fade + 1.0f / 3.0f) ) ) ))),
-		std::min(255,std::max(0,int32_t(255 * 0.5f * (0.5f + std::sin( 2.0f * M_PI * (background_fade + 2.0f / 3.0f) ) ) ))),
+    //inside of projectile is a raaaainbowwwww
+    ppu.palette_table[1][2] = glm::u8vec4(
+		std::min(255,std::max(0,int32_t(255 * 0.5f * (0.5f + std::sin( 2.0f * M_PI * (projectile_fade + 0.0f / 3.0f) ) ) ))),
+		std::min(255,std::max(0,int32_t(255 * 0.5f * (0.5f + std::sin( 2.0f * M_PI * (projectile_fade + 1.0f / 3.0f) ) ) ))),
+		std::min(255,std::max(0,int32_t(255 * 0.5f * (0.5f + std::sin( 2.0f * M_PI * (projectile_fade + 2.0f / 3.0f) ) ) ))),
 		0xff
 	);
 
-	//tilemap gets recomputed every frame as some weird plasma thing:
-	//NOTE: don't do this in your game! actually make a map or something :-)
-	for (uint32_t y = 0; y < PPU466::BackgroundHeight; ++y) {
-		for (uint32_t x = 0; x < PPU466::BackgroundWidth; ++x) {
-			//TODO: make weird plasma thing
-			ppu.background[x+PPU466::BackgroundWidth*y] = ((x+y)%16);
-		}
-	}
 
-	//background scroll:
-	ppu.background_position.x = int32_t(-0.5f * player_at.x);
-	ppu.background_position.y = int32_t(-0.5f * player_at.y);
+    //asteroids sprites 4-15
+    for(uint16_t i = 0; i < ASTEROID_COUNT; i++) {
+        ppu.sprites[i + 4].x = center.x + asteroids[i].radius * std::cos( 2.0f * M_PI * ((totalTime + asteroids[i].time_offset)/asteroids[i].period));
+        ppu.sprites[i + 4].y = center.y + asteroids[i].radius * std::sin( 2.0f * M_PI * ((totalTime + asteroids[i].time_offset)/asteroids[i].period));
+    }
 
 	//player sprite:
 	ppu.sprites[0].x = int8_t(player_at.x);
 	ppu.sprites[0].y = int8_t(player_at.y);
-	ppu.sprites[0].index = 32;
+	ppu.sprites[0].index = 0;
 	ppu.sprites[0].attributes = 7;
 
+    //black hole
+    ppu.sprites[1].x = center.x;
+    ppu.sprites[1].y = center.y;
+    if((u_int32_t)(totalTime * 2) % 2 == 0) {
+        ppu.sprites[1].index = 2;
+    } else {
+        ppu.sprites[1].index = 3;
+    }
+    ppu.sprites[1].attributes = 0;
+
+    //projectiles
+    for(Projectile *proj : *activeProjectiles) {
+        proj->draw();
+    }
+
+
 	//some other misc sprites:
-	for (uint32_t i = 1; i < 63; ++i) {
-		float amt = (i + 2.0f * background_fade) / 62.0f;
-		ppu.sprites[i].x = int8_t(0.5f * PPU466::ScreenWidth + std::cos( 2.0f * M_PI * amt * 5.0f + 0.01f * player_at.x) * 0.4f * PPU466::ScreenWidth);
-		ppu.sprites[i].y = int8_t(0.5f * PPU466::ScreenHeight + std::sin( 2.0f * M_PI * amt * 3.0f + 0.01f * player_at.y) * 0.4f * PPU466::ScreenWidth);
-		ppu.sprites[i].index = 32;
-		ppu.sprites[i].attributes = 6;
-		if (i % 2) ppu.sprites[i].attributes |= 0x80; //'behind' bit
-	}
+//	for (uint32_t i = 1; i < 63; ++i) {
+//		float amt = (i + 2.0f * projectile_fade) / 62.0f;
+//		ppu.sprites[i].x = int8_t(0.5f * PPU466::ScreenWidth + std::cos( 2.0f * M_PI * amt * 5.0f + 0.01f * player_at.x) * 0.4f * PPU466::ScreenWidth);
+//		ppu.sprites[i].y = int8_t(0.5f * PPU466::ScreenHeight + std::sin( 2.0f * M_PI * amt * 3.0f + 0.01f * player_at.y) * 0.4f * PPU466::ScreenWidth);
+//		ppu.sprites[i].index = 32;
+//		ppu.sprites[i].attributes = 6;
+//		if (i % 2) ppu.sprites[i].attributes |= 0x80; //'behind' bit
+//	}
 
 	//--- actually draw ---
 	ppu.draw(drawable_size);

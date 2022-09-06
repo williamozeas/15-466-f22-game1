@@ -14,6 +14,7 @@ using std::vector;
 bool load_png(std::istream &from, unsigned int *width, unsigned int *height, vector< glm::u8vec4 > *data, OriginLocation origin);
 void save_png(std::ostream &to, unsigned int width, unsigned int height, glm::u8vec4 const *data, OriginLocation origin);
 
+//should be called to load png
 void load_png(std::string filename, glm::uvec2 *size, std::vector< glm::u8vec4 > *data, OriginLocation origin) {
 	assert(size);
 
