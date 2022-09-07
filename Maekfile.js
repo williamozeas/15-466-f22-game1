@@ -135,11 +135,11 @@ maek.RULE([':run'], [game_exe], [
 
 //build pipeline
 //from 15466 discord, base from Jim MacCann
-maek.RULE(['dist/assets/main.tiles', "dist/assets/projectile.map"], [game_exe], [
-	['./AssetPipeline']
-]);
-maek.TARGETS.push('dist/assets/main.tiles');
-maek.TARGETS.push('dist/assets/projectile.map');
+// maek.RULE(['dist/assets/main.tiles', "dist/assets/projectile.map"], [game_exe], [
+// 	['./AssetPipeline']
+// ]);
+// maek.TARGETS.push('dist/assets/main.tiles');
+// maek.TARGETS.push('dist/assets/projectile.map');
 
 //==========================================================================
 //Now, onward to the code that makes all this work:
