@@ -20,11 +20,13 @@ where each non-transparent pixel is a 1 and a transparent pixel is a 0. This is 
 0.25 seconds, a row is read and the associated projectiles are spawned. Each bit corresponds to a direction, starting with up
 and going clockwise.
 
-All source files are under the assets/ directory.
+All source files are under the assets/ directory. To run the pipeline, simply run the AssetPipeline executable.
 
 How To Play:
 
 Use the arrow keys to move in a direction. Dodge incoming projectiles! Survive for 90 seconds to win.
+
+Natural sort code (strnatcmp.hpp) by Martin Pool. Details in file header.
 
 This game was built with [NEST](NEST.md).
 
