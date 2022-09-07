@@ -415,7 +415,7 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
     //black hole
     ppu.sprites[1].x = center.x;
     ppu.sprites[1].y = center.y;
-    if((u_int32_t)(totalTime * 2) % 2 == 0) {
+    if((uint32_t)(totalTime * 2) % 2 == 0) {
         ppu.sprites[1].index = 2;
     } else {
         ppu.sprites[1].index = 3;
