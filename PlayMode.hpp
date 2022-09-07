@@ -69,7 +69,7 @@ struct PlayMode : Mode {
 	//player position:
 	glm::vec2 player_at = glm::vec2(0.0f);
 
-    float distance_from_center = START_DIST;
+    float distance_from_center = (float)START_DIST;
     float totalTime = 0.0f;
     uint32_t tick_index = 0;
 
