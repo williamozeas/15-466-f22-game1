@@ -57,8 +57,8 @@ void Projectile::update(float elapsed) {
 }
 
 void Projectile::draw() {
-    sprite->x = x;
-    sprite->y = y;
+    sprite->x = (uint8_t)std::round(x);
+    sprite->y = (uint8_t)std::round(y);
 }
 
 bool Projectile::check_collision(PPU466::Sprite *coll) {
