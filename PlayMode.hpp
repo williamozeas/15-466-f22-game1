@@ -24,7 +24,7 @@ struct PlayMode : Mode {
     Direction currentDirection;
     struct ProjectileSet {
         //8 bits, each representing a direction, starting from up and going clockwise
-        u_int8_t directions;
+        uint8_t directions;
     };
     struct Asteroid {
         uint16_t sprite;
