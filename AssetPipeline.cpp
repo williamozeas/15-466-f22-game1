@@ -112,15 +112,17 @@ int main(int argc, char **argv) {
     std::vector< PPU466::Tile > tiles;
     std::vector< PlayMode::ProjectileSet > projectile_map;
 
-    std::ofstream tile_ofs(data_path("dist/assets/main.tiles"));
-    std::ofstream projectile_map_ofs(data_path("dist/assets/projectile.map"));
+    std::ofstream tile_ofs;
+    tile_ofs.open(data_path("dist/main.tiles"), std::fstream::trunc);
+    std::ofstream projectile_map_ofs;
+    projectile_map_ofs.open(data_path("dist/projectile.map"), std::fstream::trunc);
 
     if(!tile_ofs.is_open()) {
         std::cerr<<"Failed to open tile file : "<<errno<<std::endl;
         return -1;
     }
     if(!projectile_map_ofs.is_open()) {
-        std::cerr<<"Failed to open tile file : "<<errno<<std::endl;
+        std::cerr<<"Failed to open map file : "<<errno<<std::endl;
         return -1;
     }
 
@@ -128,7 +130,7 @@ int main(int argc, char **argv) {
     getFilenames(data_path("assets/tiles"), &tile_filepaths);
 
     add_tiles(&tile_filepaths, &tiles);
-    add_projectile_map(data_path("assets/map_test.png"), &projectile_map);
+    add_projectile_map(data_path("assets/map.png"), &projectile_map);
 
     //add all tiles
 //    add_tile("assets/tiles/player.png", &tiles);

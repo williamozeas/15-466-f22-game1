@@ -17,7 +17,7 @@
 //Loading main tile set from dist/assets/main.tiles
 
 Load < std::vector< PPU466::Tile > > main_tiles( LoadTagDefault,  []() {
-    std::ifstream ifs(data_path("assets/main.tiles").c_str(), std::ios::binary);
+    std::ifstream ifs(data_path("main.tiles").c_str(), std::ios::binary);
     if(!ifs.is_open()) {
         std::cerr << "File open failed\n";
     }
@@ -27,7 +27,7 @@ Load < std::vector< PPU466::Tile > > main_tiles( LoadTagDefault,  []() {
 });
 
 Load< std::vector < PlayMode::ProjectileSet >> projectile_map(LoadTagDefault, []() {
-    std::ifstream ifs(data_path("assets/projectile.map").c_str(), std::ios::binary);
+    std::ifstream ifs(data_path("projectile.map").c_str(), std::ios::binary);
     if(!ifs.is_open()) {
         std::cerr << "File open failed\n";
     }
@@ -37,21 +37,6 @@ Load< std::vector < PlayMode::ProjectileSet >> projectile_map(LoadTagDefault, []
 });
 
 PlayMode::PlayMode() {
-	//TODO:
-	// you *must* use an asset pipeline of some sort to generate tiles.
-	// don't hardcode them like this!
-	// or, at least, if you do hardcode them like this,
-	//  make yourself a script that spits out the code that you paste in here
-	//   and check that script into your repository.
-
-    /* Things I need to make
-     * Asset pipeline file that converts png to binary
-     * playmode game logic
-     *
-     * Assets I need to load:
-     * Tile asset (pre-defined)
-     * Map asset (I define)
-     */
     glm::i8vec2 centers(int8_t(PPU466::ScreenWidth/2 - 4), int8_t(PPU466::ScreenHeight/2 - 4));
     center = centers;
 
@@ -255,9 +240,7 @@ void PlayMode::despawn_projectile(Projectile *proj) {
 
     proj->despawn();
     unusedProjectiles->push_back(proj);
-    int size_pre = activeProjectiles->size();
     activeProjectiles->erase(std::find(activeProjectiles->begin(), activeProjectiles->end(), proj));
-    assert(size_pre == activeProjectiles->size() + 1 && "activeProjectiles did not remove element!");
 }
 
 void PlayMode::tick() {
@@ -343,7 +326,9 @@ void PlayMode::update(float elapsed) {
         //check player sprite & black hole
         if (proj->check_collision(&ppu.sprites[0])) {
             ppu.background_color = glm::vec3(0xff, 0x40, 0x40);
+            projectiles_to_delete.clear();
             reset();
+            break;
         } else if(proj->check_collision(&ppu.sprites[1])) {
             //black hole collision
             projectiles_to_delete.push_back(proj);
@@ -441,17 +426,6 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
     for(Projectile *proj : *activeProjectiles) {
         proj->draw();
     }
-
-
-	//some other misc sprites:
-//	for (uint32_t i = 1; i < 63; ++i) {
-//		float amt = (i + 2.0f * projectile_fade) / 62.0f;
-//		ppu.sprites[i].x = int8_t(0.5f * PPU466::ScreenWidth + std::cos( 2.0f * M_PI * amt * 5.0f + 0.01f * player_at.x) * 0.4f * PPU466::ScreenWidth);
-//		ppu.sprites[i].y = int8_t(0.5f * PPU466::ScreenHeight + std::sin( 2.0f * M_PI * amt * 3.0f + 0.01f * player_at.y) * 0.4f * PPU466::ScreenWidth);
-//		ppu.sprites[i].index = 32;
-//		ppu.sprites[i].attributes = 6;
-//		if (i % 2) ppu.sprites[i].attributes |= 0x80; //'behind' bit
-//	}
 
 	//--- actually draw ---
 	ppu.draw(drawable_size);

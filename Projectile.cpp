@@ -62,8 +62,8 @@ void Projectile::draw() {
 }
 
 bool Projectile::check_collision(PPU466::Sprite *coll) {
-    if(((int16_t)coll->x - 8 <= sprite->x && (int16_t)coll->x + 8 >= sprite->x)
-        && ((int16_t)coll->y - 8 <= sprite->y && (int16_t)coll->y + 8 >= sprite->y)) {
+    if(((int16_t)coll->x - 5 <= sprite->x && (int16_t)coll->x + 5 >= sprite->x)
+        && ((int16_t)coll->y - 5 <= sprite->y && (int16_t)coll->y + 5 >= sprite->y)) {
         return true;
     }
 
