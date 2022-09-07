@@ -27,7 +27,7 @@ struct PlayMode : Mode {
         uint8_t directions;
     };
     struct Asteroid {
-        uint16_t sprite;
+        uint8_t sprite;
         uint16_t radius;
         float time_offset;
         float period;

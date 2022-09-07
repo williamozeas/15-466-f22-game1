@@ -152,7 +152,7 @@ PlayMode::~PlayMode() {
 void PlayMode::reset() {
     tick_index = 0;
     totalTime = 0;
-    distance_from_center = START_DIST;
+    distance_from_center = (float)START_DIST;
     currentDirection = upDir;
 
     for(Projectile *proj : *activeProjectiles) {
@@ -402,8 +402,8 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 
     //asteroids sprites 4-15
     for(uint16_t i = 0; i < ASTEROID_COUNT; i++) {
-        ppu.sprites[i + 4].x = center.x + asteroids[i].radius * std::cos( 2.0f * M_PI * ((totalTime + asteroids[i].time_offset)/asteroids[i].period));
-        ppu.sprites[i + 4].y = center.y + asteroids[i].radius * std::sin( 2.0f * M_PI * ((totalTime + asteroids[i].time_offset)/asteroids[i].period));
+        ppu.sprites[i + 4].x = (uint8_t)std::round(center.x + asteroids[i].radius * std::cos( 2.0f * M_PI * ((totalTime + asteroids[i].time_offset)/asteroids[i].period)));
+        ppu.sprites[i + 4].y = (uint8_t)std::round(center.y + asteroids[i].radius * std::sin( 2.0f * M_PI * ((totalTime + asteroids[i].time_offset)/asteroids[i].period)));
     }
 
 	//player sprite:
@@ -413,8 +413,8 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	ppu.sprites[0].attributes = 7;
 
     //black hole
-    ppu.sprites[1].x = center.x;
-    ppu.sprites[1].y = center.y;
+    ppu.sprites[1].x = (uint8_t)std::round(center.x);
+    ppu.sprites[1].y = (uint8_t)std::round(center.y);
     if((uint32_t)(totalTime * 2) % 2 == 0) {
         ppu.sprites[1].index = 2;
     } else {
